@@ -5,6 +5,10 @@ from dateutil.relativedelta import relativedelta
 class Utils:
 
     @staticmethod
+    def generate_sequence(req_len: int, seq):
+        return '0'*(req_len - len(str(seq))) + str(seq)
+
+    @staticmethod
     def generate_schema_names(tables_schema_map, start_date: str, end_date: str) -> list[str]:
         start_date = datetime.strptime(start_date, "%Y-%m-%d")
         end_date = datetime.strptime(end_date, "%Y-%m-%d")
