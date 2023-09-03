@@ -2,29 +2,42 @@ from sqlalchemy import Column, Integer, Float, Date, Boolean, String, BigInteger
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declarative_base
 
+# from src.model.partition_by_date_meta import PartitionByYearMeta
+
 # Map entities
 Base = declarative_base()
 
+TABLE_HEADERS = ['CALL_TYPE', 'RECORD_TYPE', 'CHRONO_NUMBER', 'CHARGE_PARTY_NUMBER', 'IMSI_NUMBER', 'CALLED_CALLING_NUMBER', 'CALL_FORWARD_FLAG', 'CALL_FORWARD_NUMBER',
+                 'DIALED_DIGIT', 'INCOMING_TRUNK', 'OUTGOING_TRUNK', 'CALL_TIME', 'CALL_TIMESTAMP', 'CALL_DURATION', 'FAX_DATA_VOICE_SMS_FLAG', 'HOT_BILLING_FLAG', 'IMEI_NUMBER',
+                 'CHARGED_PARTY_START_CELL_ID', 'TELE_SERVICE_NUMBER', 'BEARER_NUMBER', 'TON_OF_CALLED_CALLING_NUMBER', 'NP_OF_CALLED_NUMBER', 'INTERMEDIATE_CALL_TYPE',
+                 'CALL_SEQUENCE_NUMBER', 'MSC_ID', 'IN_FLAG', 'CAMEL_RECORD_DATE_AND_TIME', 'CAMEL_DURATION', 'IN_SERVICE_KEY', 'SCF_ADDRESS', 'LEVEL_OF_CAMEL_SERVICE',
+                 'MCR_DESTINATION_NUMBER', 'MSC_ADDRESS', 'CALL_REFERENCE_NUMBER', 'CAMEL_INIT_CF_INDICATOR', 'DEFAULT_CALL_HANDLING', 'CHANGE_FLAGS', 'DATA_VOLUME', 'CDR_TYPE',
+                 'RING_DURATION', 'CHARGING_PARTY_END_CELL_ID', 'OTHER_PARTY_START_CELL_ID', 'OTHER_PARTY_END_CELL_ID', 'BALANCE_BEFORE_EVENT', 'BALANCE_AFTER_THE_EVENT',
+                 'EVENT_AMOUNT', 'DA_VALUE_BEFORE_CALL', 'DA_VALUE_AFTER_CALL', 'DA_ID', 'DA_AMOUNT_USED', 'DA_ACCOUNT_USED', 'FRIENDS_AND_FAMILY_IND', 'NET_FLAG', 'PEAK_FLAG',
+                 'LAI', 'ZONE_TYPE', 'ZONE_ID_1', 'ZONE_ID_2', 'ZONE_ID_3', 'COMMUNITY_INDICATOR_SELECTED', 'FRIENDS_AND_FAMILY_NUMBER', 'RATED_UNITS_FREE_UNITS',
+                 'RATED_UNITS_DEBIT', 'RATED_UNITS_CREDIT', 'OFFER_ID', 'OFFER_TYPE', 'BONUS_AMOUNT', 'ACCOUNT_GROUP_ID', 'PAM_SERVICE_ID', 'PAM_CLASS_ID', 'SELECTION_TREE_TYPE',
+                 'SERVED_ACCOUNT', 'SERVED_OFFERINGS', 'TERMINATION_CAUSE', 'CHARGING_CONTEXT_ID', 'SERVICE_CONTEXT_ID', 'SERVICE_SESSION_ID', 'MSISDN_NSK', 'SERVICE_CLASS_ID',
+                 'PAYTYPE', 'CALL_REFERENCE_ID', 'MA_AMOUNT_USED', 'SERVICE_IDENTIFIER', 'FLEX_5_TXT', 'AUTHORIZED_CHARGING_RULES', 'AUTHORIZED_QOS', 'CAUSE_CODE',
+                 'CORRELATION_ID', 'CREDIT_CONTROL_RECORDS', 'CREDIT_CTL_FAILURE_HANDLING', 'FIRST_CALL_INFO', 'LAST_PARTIAL_OUTPUT', 'NODE_NAME', 'NON_SERVED_SUBSCRIPTION_ID',
+                 'ORIGINAL_CALLED_PARTY_NUMBER', 'OUTGOING_SESSION_ID', 'RECORD_ID_NR', 'RESULT_CODE', 'RESULT_CODE_EXTENSION', 'SERVED_SUBSCRIPTION_ID', 'SERVING_ELEMENT',
+                 'SUPPRESSION_AT_FORWARDING', 'USED_START_PULSES', 'USED_UNCHARGED_SERVICE_UNITS', 'USER_SESSION_ID']
+
 
 class Cs5CcNVoiceMA(Base):
-    __tablename__ = "table_name"
-    id = Column(Integer, primary_key=True)
-    DW_FILE_ID  = Column(Integer)
-    BATCH_ID = Column(Integer)
-    DW_FILE_ROW_NUMBER = Column(Integer)
-    CALL_TYPE = Column(String)
+    __tablename__ = "ccn_voice"
+    CALL_TYPE = Column(String, primary_key=True)
     RECORD_TYPE = Column(String)
     CHRONO_NUMBER = Column(String)
     CHARGE_PARTY_NUMBER = Column(String)
     IMSI_NUMBER = Column(String)
-    CALLED_CALLING_NUMBER = Column(String)
+    CALLED_CALLING_NUMBER = Column(String, primary_key=True)
     CALL_FORWARD_FLAG = Column(String)
     CALL_FORWARD_NUMBER = Column(String)
     DIALED_DIGIT = Column(String)
     INCOMING_TRUNK = Column(String)
     OUTGOING_TRUNK = Column(String)
-    CALL_TIME = Column(String)
-    CALL_TIMESTAMP = Column(Date)
+    CALL_TIME = Column(String, primary_key=True)
+    CALL_TIMESTAMP = Column(Date, primary_key=True)
     CALL_DURATION = Column(Integer)
     FAX_DATA_VOICE_SMS_FLAG = Column(String)
     HOT_BILLING_FLAG = Column(String)
@@ -37,7 +50,6 @@ class Cs5CcNVoiceMA(Base):
     INTERMEDIATE_CALL_TYPE = Column(String)
     CALL_SEQUENCE_NUMBER = Column(String)
     MSC_ID = Column(String)
-    BSC_ID = Column(String)
     IN_FLAG = Column(String)
     CAMEL_RECORD_DATE_AND_TIME = Column(Date)
     CAMEL_DURATION = Column(String)
@@ -90,20 +102,12 @@ class Cs5CcNVoiceMA(Base):
     CHARGING_CONTEXT_ID = Column(String)
     SERVICE_CONTEXT_ID = Column(String)
     SERVICE_SESSION_ID = Column(String)
-    DATE_KEY = Column(Integer)
     MSISDN_NSK = Column(Integer)
-    CREATE_DT = Column(Date)
-    SOURCE_FILE_NM = Column(String)
-    NETWORK_CD = Column(String)
     SERVICE_CLASS_ID = Column(String)
     PAYTYPE = Column(Integer)
     CALL_REFERENCE_ID = Column(String)
     MA_AMOUNT_USED = Column(String)
     SERVICE_IDENTIFIER = Column(String)
-    FLEX_1_TXT = Column(String)
-    FLEX_2_TXT = Column(String)
-    FLEX_3_TXT = Column(String)
-    FLEX_4_TXT = Column(String)
     FLEX_5_TXT = Column(String)
     AUTHORIZED_CHARGING_RULES = Column(String)
     AUTHORIZED_QOS = Column(String)
@@ -126,4 +130,3 @@ class Cs5CcNVoiceMA(Base):
     USED_START_PULSES = Column(String)
     USED_UNCHARGED_SERVICE_UNITS = Column(String)
     USER_SESSION_ID = Column(String)
-    DW_SUBPART = Column(Integer)

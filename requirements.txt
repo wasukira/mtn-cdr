@@ -3,3 +3,4 @@ pandas
 python-dateutil
 pytest
 pandas
+psycopg2-binary
