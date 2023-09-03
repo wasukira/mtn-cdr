@@ -2,3 +2,4 @@ SQLAlchemy==1.4.39
 pandas
 python-dateutil
 pytest
+pandas

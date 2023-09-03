@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 class Utils:
 
     @staticmethod
-    def generate_month_interval(start_date: str, end_date: str) -> list[str]:
+    def generate_schema_names(tables_schema_map, start_date: str, end_date: str) -> list[str]:
         start_date = datetime.strptime(start_date, "%Y-%m-%d")
         end_date = datetime.strptime(end_date, "%Y-%m-%d")
 
@@ -33,7 +33,20 @@ class Utils:
                 dates_years = []
 
             # store the date in current year
-            dates_years.append(start_date.strftime("%b.%y"))
+
+            # if tables_schema_map
+
+            schema = None
+            if tables_schema_map['date_str'] == 'MONTH_YEAR':
+                dated = start_date.strftime("%b_%y")
+                schema = f"{tables_schema_map['schema_prefix']}_{dated}"
+            elif tables_schema_map['date_str'] == 'YEARMONTH':
+                dated = start_date.strftime("%Y%m")
+                schema = f"{tables_schema_map['schema_prefix']}_{dated}"
+
+            # dates_years.append(start_date.strftime("%b_%y"))
+
+            dates_years.append(schema.upper())
 
             # add a month
             start_date += relativedelta(months=1)
@@ -44,10 +57,3 @@ class Utils:
                 dates.append(dates_years)
 
         return dates_years
-
-    @staticmethod
-    def generate_schema_names(schema_prefix, months) -> list:
-        schemas = []
-        for month in months:
-            schemas.append(f"{schema_prefix}_{month}")
-        return schemas
