@@ -82,8 +82,5 @@ if __name__ == '__main__':
     logger.info(tables_schema_mapping[table_name])
     schemas = Utils.generate_schema_names(tables_schema_mapping[table_name], START_DATE, END_DATE)
     partitions = pd.date_range(START_DATE, datetime.strptime(END_DATE, '%Y-%m-%d') - timedelta(days=1), freq='d')
-
-
-    # schemas = Utils.generate_schema_names(months)
     logger.info(schemas)
     logger.info(partitions)
