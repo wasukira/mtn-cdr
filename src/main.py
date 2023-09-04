@@ -34,6 +34,8 @@ engine = engine.create_engine(f"postgresql://{db_user}:{db_pass}@{db_host}:{db_p
 factory = sessionmaker(bind=engine)
 session = factory()
 
+streaming_strategy = True
+
 # table -> schema_prefix
 tables_schema_mapping = {
     'CS5_AIR_REFILL_MA': {
@@ -86,34 +88,64 @@ tables_schema_mapping = {
 }
 
 
-def process_cdr(table_definitions, schema: str, schema_table_name, table_partitions):
+def persist_record(batch, file_path):
+    df = pd.DataFrame(batch)
+    df.to_csv(file_path, sep=',', encoding='utf-8', index=False)
 
+
+def process_cdr(table_definitions, schema: str, schema_table_name, table_partitions):
     for table_partition in table_partitions:
 
-        sql = f"{table_definitions['sql']} {schema}.{schema_table_name} PARTITION (P_{table_partition})"
+        # sql = f"{table_definitions['sql']} {schema}.{schema_table_name} PARTITION (P_{table_partition})"
 
-        # sql = f"{table_definitions['sql']} ccn_voice"
-        # logger.info(sql)
+        sql = f"{table_definitions['sql']} ccn_voice"
+        logger.info(sql)
 
-        # Fetch all results
-        query = text(sql)
-        results = engine.execute(query).fetchall()
+        exit()
 
-        file_sequence = 0
-        for i in range(0, len(results), FILE_RECORD_COUNT):
-            logger.info(f"{i} - {i + FILE_RECORD_COUNT}")
-            batch = results[i:i + FILE_RECORD_COUNT]
-            if HEADERS:
-                df = pd.DataFrame(batch, columns=TABLE_HEADERS)
-            else:
-                df = pd.DataFrame(batch)
-            file_name = os.path.join(table_definitions['path'],
-                                     f"{table_definitions['file_name']}_{Utils.generate_sequence(FILE_SEQUENCE_LENGTH, file_sequence)}_{table_partition}.csv")
-            logger.info(file_name)
-            df.to_csv(file_name, sep=',', encoding='utf-8', index=False)
+        if streaming_strategy:
+            query = text(sql)
+            proxy = engine.execution_options(stream_results=True).execute(query)
+            file_sequence = 0
+            while True:
+                batch = proxy.fetchmany(FILE_RECORD_COUNT)  # 3,000 rows at a time
+                if not batch:
+                    break
 
-            logger.info(df.to_string())
-            file_sequence = file_sequence + 1
+                file_name = os.path.join(table_definitions['path'],
+                                         f"{table_definitions['file_name']}_{Utils.generate_sequence(FILE_SEQUENCE_LENGTH, file_sequence)}_{table_partition}.csv")
+                persist_record(batch, file_name)
+                file_sequence = file_sequence + 1
+
+                # for row in batch:
+                #     logger.info(row)
+                # exit()
+
+            proxy.close()
+        else:
+            # Fetch all results
+            query = text(sql)
+            results = engine.execute(query).fetchall()
+
+            logger.info(f"records - {len(results)}")
+
+            exit()
+
+            file_sequence = 0
+            for i in range(0, len(results), FILE_RECORD_COUNT):
+                logger.info(f"{i} - {i + FILE_RECORD_COUNT}")
+                batch = results[i:i + FILE_RECORD_COUNT]
+                if HEADERS:
+                    df = pd.DataFrame(batch, columns=TABLE_HEADERS)
+                else:
+                    df = pd.DataFrame(batch)
+                file_name = os.path.join(table_definitions['path'],
+                                         f"{table_definitions['file_name']}_{Utils.generate_sequence(FILE_SEQUENCE_LENGTH, file_sequence)}_{table_partition}.csv")
+                logger.info(file_name)
+                df.to_csv(file_name, sep=',', encoding='utf-8', index=False)
+
+                logger.info(df.to_string())
+                file_sequence = file_sequence + 1
 
 
 if __name__ == '__main__':
@@ -125,7 +157,7 @@ if __name__ == '__main__':
     # logger.info(tables_schema_mapping[table_name])
     schemas = Utils.generate_schema_names(tables_schema_mapping[table_name], START_DATE, END_DATE)
     partitions = pd.date_range(START_DATE, datetime.strptime(END_DATE, '%Y-%m-%d') - timedelta(days=1), freq='d').strftime('%Y%m%d').tolist()
-    logger.info(partitions)
+    # logger.info(partitions)
     for schema_name in schemas:
         process_cdr(tables_schema_mapping[table_name], schema_name, table_name, partitions)
     # process_cdr()
