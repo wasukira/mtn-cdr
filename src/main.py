@@ -106,7 +106,7 @@ tables_schema_mapping = {
 
 def persist_record(batch, file_path):
     df = pd.DataFrame(batch)
-    df.to_csv(file_path, sep=',', encoding='utf-8', index=False)
+    df.to_csv(file_path, sep=',', encoding='utf-8', index=False, header=False)
 
 
 def process_cdr(table_definitions, schema: str, schema_table_name, table_partitions):
