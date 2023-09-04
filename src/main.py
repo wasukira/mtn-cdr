@@ -1,15 +1,16 @@
 import logging
 import sys
 import os
+import time
 from typing import List
+import argparse
 from datetime import timedelta, datetime
 from sqlalchemy import engine, text
 from sqlalchemy.orm import sessionmaker
-from model.prepaid_rate import PrepaidRateModel
-from src.model.cs5_ccn_voice_ma import Cs5CcNVoiceMA, TABLE_HEADERS
+from model.cs5_ccn_voice_ma import Cs5CcNVoiceMA, TABLE_HEADERS
 import pandas as pd
-from src.utils.utils import Utils
-from src.utils.queries import ccn_voice_sql_stmt, pg_ccn_voice_sql_stmt
+from utils.utils import Utils
+from utils.queries import ccn_voice_sql_stmt, pg_ccn_voice_sql_stmt
 
 os.environ['PATH'] += os.pathsep + "C:\\Users\\USER\\Desktop\\instantclient_19_20"
 
@@ -26,7 +27,17 @@ FILE_SEQUENCE_LENGTH: int = 5
 
 HEADERS = False
 
-POSTGRES_DIALECT = False
+POSTGRES_DIALECT = True
+
+parser = argparse.ArgumentParser()
+parser.add_argument("table_name", help="Name of the table")
+parser.add_argument("start_date", help="Start Date")
+parser.add_argument("end_date", help="End Date")
+
+args = parser.parse_args()
+table_name = args.table_name
+start_date = args.start_date
+end_date = args.end_date
 
 if POSTGRES_DIALECT:
     db_host = 'localhost'
@@ -104,20 +115,25 @@ tables_schema_mapping = {
 }
 
 
-def persist_record(batch, file_path):
+def persist_record(batch, file_path, file_name):
     df = pd.DataFrame(batch)
-    df.to_csv(file_path, sep=',', encoding='utf-8', index=False, header=False)
+    os.makedirs(file_path, exist_ok=True)
+    full_file_name = os.path.join(file_path, file_name)
+    df.to_csv(full_file_name, sep=',', encoding='utf-8', index=False, header=False)
 
 
 def process_cdr(table_definitions, schema: str, schema_table_name, table_partitions):
     for table_partition in table_partitions:
+
+        logger.info(f"started processing partition {schema} - {table_partition}")
+        start_time = time.time()
 
         if POSTGRES_DIALECT:
             sql = f"{table_definitions['sql']} ccn_voice"
         else:
             sql = f"{table_definitions['sql']} {schema}.{schema_table_name} PARTITION (P_{table_partition})"
 
-        logger.info(sql)
+        # logger.info(sql)
 
         if streaming_strategy:
             query = text(sql)
@@ -128,9 +144,9 @@ def process_cdr(table_definitions, schema: str, schema_table_name, table_partiti
                 if not batch:
                     break
 
-                file_name = os.path.join(table_definitions['path'],
-                                         f"{table_definitions['file_name']}_{Utils.generate_sequence(FILE_SEQUENCE_LENGTH, file_sequence)}_{table_partition}.csv")
-                persist_record(batch, file_name)
+                file_path = os.path.join(table_definitions['path'], table_partition)
+                file_name = f"{table_definitions['file_name']}_{Utils.generate_sequence(FILE_SEQUENCE_LENGTH, file_sequence)}_{table_partition}.csv"
+                persist_record(batch, file_path, file_name)
                 file_sequence = file_sequence + 1
 
                 # for row in batch:
@@ -138,6 +154,9 @@ def process_cdr(table_definitions, schema: str, schema_table_name, table_partiti
                 # exit()
 
             proxy.close()
+
+            logger.info(f"started processing partition {schema} - {table_partition}")
+
         else:
             # Fetch all results
             query = text(sql)
@@ -155,25 +174,26 @@ def process_cdr(table_definitions, schema: str, schema_table_name, table_partiti
                     df = pd.DataFrame(batch, columns=TABLE_HEADERS)
                 else:
                     df = pd.DataFrame(batch)
-                file_name = os.path.join(table_definitions['path'],
-                                         f"{table_definitions['file_name']}_{Utils.generate_sequence(FILE_SEQUENCE_LENGTH, file_sequence)}_{table_partition}.csv")
+                file_path = os.path.join(table_definitions['path'], table_partition)
+                file_name = f"{table_definitions['file_name']}_{Utils.generate_sequence(FILE_SEQUENCE_LENGTH, file_sequence)}_{table_partition}.csv"
                 logger.info(file_name)
                 df.to_csv(file_name, sep=',', encoding='utf-8', index=False)
 
                 logger.info(df.to_string())
                 file_sequence = file_sequence + 1
 
+        end_time = time.time()
+        logger.info(f"completed processing partition {schema} - {table_partition} in {end_time - start_time}")
+
 
 if __name__ == '__main__':
 
-    START_DATE = '2019-04-01'
-    END_DATE = '2019-05-01'
-    table_name = 'CS5_CCN_VOICE_MA'
-    # logger.info(table_name)
-    # logger.info(tables_schema_mapping[table_name])
-    schemas = Utils.generate_schema_names(tables_schema_mapping[table_name], START_DATE, END_DATE)
-    partitions = pd.date_range(START_DATE, datetime.strptime(END_DATE, '%Y-%m-%d') - timedelta(days=1), freq='d').strftime('%Y%m%d').tolist()
+    logger.info(f"querying - {table_name}")
+    logger.info(f"start_date - {start_date}")
+    logger.info(f"end_date - {end_date}")
+
+    schemas = Utils.generate_schema_names(tables_schema_mapping[table_name], start_date, end_date)
+    partitions = pd.date_range(start_date, datetime.strptime(end_date, '%Y-%m-%d') - timedelta(days=1), freq='d').strftime('%Y%m%d').tolist()
     # logger.info(partitions)
     for schema_name in schemas:
         process_cdr(tables_schema_mapping[table_name], schema_name, table_name, partitions)
-    # process_cdr()

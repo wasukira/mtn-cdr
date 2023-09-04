@@ -1,3 +1,5 @@
+### DEPRECATED
+
 from sqlalchemy import Column, Integer, Float, Date, Boolean, String, BigInteger
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declarative_base
