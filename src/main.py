@@ -11,6 +11,8 @@ import pandas as pd
 from src.utils.utils import Utils
 from src.utils.queries import ccn_voice_sql_stmt, pg_ccn_voice_sql_stmt
 
+os.environ['PATH'] += os.pathsep + "C:\\Users\\USER\\Desktop\\instantclient_19_20"
+
 logging.basicConfig(format='[%(asctime)s] - [%(levelname)-8s] - [%(module)s:%(lineno)d ] - %(message)s',
                     datefmt='%Y-%m-%d:%H:%M:%S',
 
@@ -24,7 +26,7 @@ FILE_SEQUENCE_LENGTH: int = 5
 
 HEADERS = False
 
-POSTGRES_DIALECT = True
+POSTGRES_DIALECT = False
 
 if POSTGRES_DIALECT:
     db_host = 'localhost'
@@ -109,9 +111,12 @@ def persist_record(batch, file_path):
 
 def process_cdr(table_definitions, schema: str, schema_table_name, table_partitions):
     for table_partition in table_partitions:
-        # sql = f"{table_definitions['sql']} {schema}.{schema_table_name} PARTITION (P_{table_partition})"
 
-        sql = f"{table_definitions['sql']} ccn_voice"
+        if POSTGRES_DIALECT:
+            sql = f"{table_definitions['sql']} ccn_voice"
+        else:
+            sql = f"{table_definitions['sql']} {schema}.{schema_table_name} PARTITION (P_{table_partition})"
+
         logger.info(sql)
 
         if streaming_strategy:
