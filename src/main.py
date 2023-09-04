@@ -2,6 +2,7 @@ import logging
 import sys
 import os
 import time
+import concurrent.futures
 from typing import List
 import argparse
 from datetime import timedelta, datetime
@@ -33,11 +34,15 @@ parser = argparse.ArgumentParser()
 parser.add_argument("table_name", help="Name of the table")
 parser.add_argument("start_date", help="Start Date")
 parser.add_argument("end_date", help="End Date")
+parser.add_argument("concurrency", type=int, help="Enable Concurrency, 0 for No, 1 for Yes", choices={0, 1})
+parser.add_argument("no_of_threads", type=int, help="Number of Threads")
 
 args = parser.parse_args()
 table_name = args.table_name
 start_date = args.start_date
 end_date = args.end_date
+concurrency = args.concurrency
+threads = args.no_of_threads
 
 if POSTGRES_DIALECT:
     db_host = 'localhost'
@@ -158,13 +163,12 @@ def process_cdr(table_definitions, schema: str, schema_table_name, table_partiti
             logger.info(f"started processing partition {schema} - {table_partition}")
 
         else:
+            # Very memory intensive
             # Fetch all results
             query = text(sql)
             results = engine.execute(query).fetchall()
 
             logger.info(f"records - {len(results)}")
-
-            exit()
 
             file_sequence = 0
             for i in range(0, len(results), FILE_RECORD_COUNT):
@@ -185,15 +189,30 @@ def process_cdr(table_definitions, schema: str, schema_table_name, table_partiti
         end_time = time.time()
         logger.info(f"completed processing partition {schema} - {table_partition} in {end_time - start_time}")
 
+    return schema
 
 if __name__ == '__main__':
 
     logger.info(f"querying - {table_name}")
     logger.info(f"start_date - {start_date}")
     logger.info(f"end_date - {end_date}")
+    logger.info(f"concurrent enabled ? - {concurrency}")
+    logger.info(f"threads - {threads}")
 
     schemas = Utils.generate_schema_names(tables_schema_mapping[table_name], start_date, end_date)
     partitions = pd.date_range(start_date, datetime.strptime(end_date, '%Y-%m-%d') - timedelta(days=1), freq='d').strftime('%Y%m%d').tolist()
     # logger.info(partitions)
-    for schema_name in schemas:
-        process_cdr(tables_schema_mapping[table_name], schema_name, table_name, partitions)
+
+    if int(concurrency):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=int(threads)) as executor:
+            futures = [executor.submit(process_cdr, schema_name) for schema_name in schemas]
+            for idx, future in enumerate(concurrent.futures.as_completed(futures, timeout=None)):
+                res = future.result()
+                try:
+                    res = future.result()
+                    logger.info('Processed job - %s - result %s ', idx, res)
+                except Exception as ex:
+                    logger.error('%s - generated an exception: %s', idx, ex)
+    else:
+        for schema_name in schemas:
+            process_cdr(tables_schema_mapping[table_name], schema_name, table_name, partitions)
