@@ -24,13 +24,27 @@ FILE_SEQUENCE_LENGTH: int = 5
 
 HEADERS = False
 
-db_host = 'localhost'
-db_user = 'airflow'
-db_pass = 'airflow'
-db_name = 'airflow'
-db_port = 5435
+POSTGRES_DIALECT = True
 
-engine = engine.create_engine(f"postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}")
+if POSTGRES_DIALECT:
+    db_host = 'localhost'
+    db_user = 'airflow'
+    db_pass = 'airflow'
+    db_name = 'airflow'
+    db_port = 5435
+    engine = engine.create_engine(f"postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}")
+else:
+    DIALECT = 'oracle'
+    SQL_DRIVER = 'cx_oracle'
+    USERNAME = 'DATA_EXTRACT_GDE'  # enter your username
+    PASSWORD = 'DATA_EXTRACT_GDE'  # enter your password
+    HOST = '10.156.209.95'  # enter the oracle db host url
+    PORT = 1521  # enter the oracle port number
+    SERVICE = 'BIBRST'  # enter the oracle db service name
+    ENGINE_PATH_WIN_AUTH = DIALECT + '+' + SQL_DRIVER + '://' + USERNAME + ':' + PASSWORD + '@' + HOST + ':' + str(PORT) + '/?service_name=' + SERVICE
+
+    engine = engine.create_engine(ENGINE_PATH_WIN_AUTH)
+
 factory = sessionmaker(bind=engine)
 session = factory()
 
@@ -95,13 +109,10 @@ def persist_record(batch, file_path):
 
 def process_cdr(table_definitions, schema: str, schema_table_name, table_partitions):
     for table_partition in table_partitions:
-
         # sql = f"{table_definitions['sql']} {schema}.{schema_table_name} PARTITION (P_{table_partition})"
 
         sql = f"{table_definitions['sql']} ccn_voice"
         logger.info(sql)
-
-        exit()
 
         if streaming_strategy:
             query = text(sql)
